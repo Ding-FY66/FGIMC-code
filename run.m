@@ -9,20 +9,21 @@ Datafold = [Dataname,'_percentDel_',num2str(percentDel),'.mat'];
 load(Dataname);
 load(Datafold);
 
-%----------参数（需要找最优参数）----------%
-l1 = 0.01;    %lambda1
-l2 = 10;     %lambda2
-l3 = 0.001;     %lambda2
-f = 1;
-r = 6;   %r = 6取得最优值
-
-
-t = tic();
+%在不同缺失情况中，λ1、λ2和λ3在不同取值下取得最优结果，可进行网格搜索
+l1_space = [0.1, 1, 0.01, 1, 0.1, 0.1, 0.001, 1, 0.1, 1]; %lambda1
+l2_space = [0.1, 1, 10, 0.1, 1, 1, 10, 10, 10, 1]; %lambda2
+l3_space = [0.01, 0.001, 0.001, 0.0001, 0.001, 0.001, 0.01, 0.0001, 0.001, 0.01]; %lambda3 在该数据集上，一般取值小于0.01
+r_space = [6, 6, 6, 6, 6, 6, 6, 6, 6, 5]; %在前9中缺失情况中，r取6时取得最优结果，最后一种情况r取5时取得最优结果
 
 T = table( [],[],[],[],[],[],[],[],[],[],[],[], 'VariableNames', { 'f','l1','l2','l3','ACC', 'NMI', 'Purity','F-score','Precision','Recall','ARI','Entropy'});
 idx = 1;
 
+
 for f = 1:10
+    l1 = l1_space(f);
+    l2 = l2_space(f);
+    l3 = l3_space(f);
+    r = r_space(f);
     ind_folds = folds{f};
     load(Dataname);
     truthF =  truth;   % 真实类标
@@ -30,7 +31,6 @@ for f = 1:10
     numInst = length(truthF);
     num_cluster = length(unique(truthF)); %unique找出truthF中的唯一元素
     numview = length(X);
-
 
     for iv = 1:length(X)
         X1 = X{iv};     % 此处X1的维度为d*n
@@ -80,8 +80,7 @@ for f = 1:10
     LU = diag(sum(linshi_U))-linshi_U;
     [F, ~, ev]=eig1(LU, num_cluster, 0);
 
-
-    [U,F,obj] = Main(Sor,alpha,B,U,D,F,r,num_cluster,numInst,numview,l1,l2,l3,max_iter,ind_folds);
+    [U,F,obj] = Main(Sor,alpha,B,U,D,F,r,num_cluster,numInst,numview,l1,l2,l3,max_iter,ind_folds,f);
 
     new_F = F;
     norm_mat = repmat(sqrt(sum(new_F.*new_F,2)),1,size(new_F,2));
@@ -98,6 +97,4 @@ for f = 1:10
     T(idx,:) = {f,l1,l2,l3,result_cluster(1),result_cluster(2),result_cluster(3),result_cluster(4),result_cluster(5),result_cluster(6),result_cluster(7),result_cluster(8)};
     idx = idx+1;
     writetable(T, 'data.csv');
-
 end
-toc(t)
